@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.Shell;
 using System;
+using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Task = System.Threading.Tasks.Task;
@@ -31,7 +32,7 @@ namespace LineEndings2022
         /// LineEndings2022Package GUID string.
         /// </summary>
         public const string PackageGuidString = "09058149-5766-4bb0-83c7-0b26796b20f0";
-
+        
         #region Package Members
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Text.Editor;
+﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System.ComponentModel.Composition;
 
@@ -25,6 +26,9 @@ namespace LineEndings2022
         [Order(After = PredefinedAdornmentLayers.Selection, Before = PredefinedAdornmentLayers.Text)]
         private AdornmentLayerDefinition editorAdornmentLayer;
 
+        [Import]
+        internal SVsServiceProvider ServiceProvider = null;
+
 #pragma warning restore 649, 169
 
         #region IWpfTextViewCreationListener
@@ -37,7 +41,7 @@ namespace LineEndings2022
         public void TextViewCreated(IWpfTextView textView)
         {
             // The adornment will listen to any event that changes the layout (text changes, scrolling, etc)
-            new LineEndingAdornment(textView);
+            new LineEndingAdornment(ServiceProvider, textView);
         }
 
         #endregion

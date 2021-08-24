@@ -1,7 +1,13 @@
-﻿using Microsoft.VisualStudio.Text;
+﻿using EnvDTE;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using System;
+using System.ComponentModel.Composition;
+using System.Windows;
+//using System.Drawing;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -27,18 +33,36 @@ namespace LineEndings2022
         /// </summary>
         private readonly Brush brush_for_lf;
         private readonly Brush brush_for_crlf;
+        private Brush glyphBrush;
 
         /// <summary>
         /// Adornment pen.
         /// </summary>
         private readonly Pen pen;
 
+        Color backgroundColor;
+        Color foregroundColor;
+        //Font text_font;
+        //Image image_for_lf;
+        //Image image_for_crlf;
+        string font_family;
+        int font_size;
+        ImageSource image_source_crlf;
+        ImageSource image_source_lf;
+        float pixelsPerDip;
+        private SVsServiceProvider service_provider;
         /// <summary>
         /// Initializes a new instance of the <see cref="LineEndingAdornment"/> class.
         /// </summary>
         /// <param name="view">Text view to create the adornment for</param>
-        public LineEndingAdornment(IWpfTextView view)
+        public LineEndingAdornment(SVsServiceProvider provider, IWpfTextView view)
         {
+            service_provider = provider;
+
+            pixelsPerDip = (float)VisualTreeHelper.GetDpi(new Button()).PixelsPerDip;
+            GetTextFont();
+            image_source_crlf = GenerateTextImageSource("8", glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
+            image_source_lf = GenerateTextImageSource("$", glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
             if (view == null)
             {
                 throw new ArgumentNullException("view");
@@ -78,6 +102,25 @@ namespace LineEndings2022
             }
         }
 
+        private void GetTextFont()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            DTE vsEnvironment = (DTE)service_provider.GetService(typeof(DTE));
+            EnvDTE.Properties propertiesList = vsEnvironment.get_Properties("FontsAndColors", "TextEditor");
+            Property prop = propertiesList.Item("FontSize");
+            font_size = (System.Int16)prop.Value;
+            font_family = propertiesList.Item("FontFamily").Value.ToString();
+            var fontColorItems = propertiesList.Item("FontsAndColorsItems").Object as FontsAndColorsItems;
+            var colorableItems = fontColorItems.Item("Comment");
+            byte[] color_bytes = BitConverter.GetBytes(colorableItems.Foreground);
+            glyphBrush = new SolidColorBrush(Color.FromArgb(0xff, color_bytes[2], color_bytes[1], color_bytes[0]));
+            var oleColor = System.Convert.ToInt32(colorableItems.Background);
+            //backgroundColor = Color.from(oleColor);
+            oleColor = System.Convert.ToInt32(colorableItems.Foreground);
+            //foregroundColor = System.Drawing.ColorTranslator.FromOle(oleColor);
+            //text_font = new System.Drawing.Font(fontFamily, fontSize);
+        }
+
         /// <summary>
         /// Adds the scarlet box behind the 'a' characters within the given line
         /// </summary>
@@ -92,28 +135,91 @@ namespace LineEndings2022
                 if (this.view.TextSnapshot[charIndex] == '\n')
                 {
                     SnapshotSpan span = new SnapshotSpan(this.view.TextSnapshot, Span.FromBounds(charIndex, charIndex + 1));
+                    
                     Geometry geometry = textViewLines.GetMarkerGeometry(span);
                     if (geometry != null)
                     {
-                        var drawing = new GeometryDrawing(line.LineBreakLength == 2 ? this.brush_for_crlf : this.brush_for_lf, this.pen, geometry);
-                        drawing.Freeze();
+                        //var drawing = new GeometryDrawing(line.LineBreakLength == 2 ? this.brush_for_crlf : this.brush_for_lf, this.pen, geometry);
+                        //drawing.Freeze();
 
-                        var drawingImage = new DrawingImage(drawing);
-                        drawingImage.Freeze();
-
-                        var image = new Image
+                        //var drawingImage = new DrawingImage(drawing);
+                        //drawingImage.Freeze();
+                        Image image;
+                        if (line.LineBreakLength == 2)
                         {
-                            Source = drawingImage,
-                        };
+                            image_source_crlf.Freeze();
+                            image = new Image { Source = image_source_crlf };
+                        }
+                        else
+                        {
+                            image_source_lf.Freeze();
+                            image = new Image { Source = image_source_lf };
+
+                        }
 
                         // Align the image with the top of the bounds of the text geometry
-                        Canvas.SetLeft(image, geometry.Bounds.Left);
-                        Canvas.SetTop(image, geometry.Bounds.Top);
+                        Canvas.SetLeft(image, geometry.Bounds.Left + 1);
+                        Canvas.SetTop(image, geometry.Bounds.Top + 2);
 
                         this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
                     }
                 }
             }
         }
+        private ImageSource GenerateTextImageSource(string text, Brush foreBrush, FontStyle fontStyle, FontWeight fontWeight, FontStretch fontStretch)
+        {
+            var fontFamily = new FontFamily("Wingdings 3"); // font_family);
+            if (fontFamily != null && !String.IsNullOrEmpty(text))
+            {
+                Typeface typeface = new Typeface(fontFamily, fontStyle, fontWeight, fontStretch);
+
+                GlyphTypeface glyphTypeface;
+                if (!typeface.TryGetGlyphTypeface(out glyphTypeface))
+                {
+                    //typeface = new Typeface(new FontFamily(new Uri("pack://application:,,,"), fontFamily.Source), fontStyle, fontWeight, fontStretch);
+                    //if (!typeface.TryGetGlyphTypeface(out glyphTypeface))
+                        throw new InvalidOperationException("No glyphtypeface found");
+                }
+
+                ushort[] glyphIndexes = new ushort[text.Length];
+                double[] advanceWidths = new double[text.Length];
+
+                for (int n = 0; n < text.Length; n++)
+                {
+                    ushort glyphIndex;
+                    try
+                    {
+                        glyphIndex = glyphTypeface.CharacterToGlyphMap[text[n]];
+
+                    }
+                    catch (Exception)
+                    {
+                        glyphIndex = 42;
+                    }
+                    glyphIndexes[n] = glyphIndex;
+
+                    double width = glyphTypeface.AdvanceWidths[glyphIndex] * 1.0;
+                    advanceWidths[n] = width;
+                }
+
+                try
+                {
+
+                    GlyphRun gr = new GlyphRun(glyphTypeface, 0, false, font_size * 96.0 / 72.0, pixelsPerDip, glyphIndexes,
+                                                                         new Point(0, 0), advanceWidths, null, null, null, null, null, null);
+
+                    GlyphRunDrawing glyphRunDrawing = new GlyphRunDrawing(foreBrush, gr);
+                    return new DrawingImage(glyphRunDrawing);
+                }
+                catch (Exception ex)
+                {
+                    // ReSharper disable LocalizableElement
+                    Console.WriteLine("Error in generating Glyphrun : " + ex.Message);
+                    // ReSharper restore LocalizableElement
+                }
+            }
+            return null;
+        }
+
     }
 }
