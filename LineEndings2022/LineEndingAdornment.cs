@@ -1,13 +1,10 @@
 ﻿using EnvDTE;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using System;
-using System.ComponentModel.Composition;
 using System.Windows;
-//using System.Drawing;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -28,24 +25,8 @@ namespace LineEndings2022
         /// </summary>
         private readonly IWpfTextView view;
 
-        /// <summary>
-        /// Adornment brush.
-        /// </summary>
-        private readonly Brush brush_for_lf;
-        private readonly Brush brush_for_crlf;
         private Brush glyphBrush;
 
-        /// <summary>
-        /// Adornment pen.
-        /// </summary>
-        private readonly Pen pen;
-
-        Color backgroundColor;
-        Color foregroundColor;
-        //Font text_font;
-        //Image image_for_lf;
-        //Image image_for_crlf;
-        string font_family;
         int font_size;
         ImageSource image_source_crlf;
         ImageSource image_source_lf;
@@ -58,6 +39,8 @@ namespace LineEndings2022
         public LineEndingAdornment(SVsServiceProvider provider, IWpfTextView view)
         {
             service_provider = provider;
+
+            ThreadHelper.ThrowIfNotOnUIThread();
 
             pixelsPerDip = (float)VisualTreeHelper.GetDpi(new Button()).PixelsPerDip;
             GetTextFont();
@@ -72,17 +55,6 @@ namespace LineEndings2022
 
             this.view = view;
             this.view.LayoutChanged += this.OnLayoutChanged;
-
-            // Create the pen and brush to color the box behind the a's
-            this.brush_for_lf = new SolidColorBrush(Color.FromArgb(0x20, 0x00, 0x00, 0xff));
-            this.brush_for_lf.Freeze();
-            this.brush_for_crlf = new SolidColorBrush(Color.FromArgb(0x20, 0x00, 0xff, 0x00));
-            this.brush_for_crlf.Freeze();
-
-            var penBrush = new SolidColorBrush(Colors.Red);
-            penBrush.Freeze();
-            this.pen = new Pen(penBrush, 0.5);
-            this.pen.Freeze();
         }
 
         /// <summary>
@@ -106,19 +78,14 @@ namespace LineEndings2022
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             DTE vsEnvironment = (DTE)service_provider.GetService(typeof(DTE));
+            if (vsEnvironment == null) throw new InvalidOperationException("No DTE service");
             EnvDTE.Properties propertiesList = vsEnvironment.get_Properties("FontsAndColors", "TextEditor");
             Property prop = propertiesList.Item("FontSize");
             font_size = (System.Int16)prop.Value;
-            font_family = propertiesList.Item("FontFamily").Value.ToString();
             var fontColorItems = propertiesList.Item("FontsAndColorsItems").Object as FontsAndColorsItems;
             var colorableItems = fontColorItems.Item("Comment");
             byte[] color_bytes = BitConverter.GetBytes(colorableItems.Foreground);
-            glyphBrush = new SolidColorBrush(Color.FromArgb(0xff, color_bytes[2], color_bytes[1], color_bytes[0]));
-            var oleColor = System.Convert.ToInt32(colorableItems.Background);
-            //backgroundColor = Color.from(oleColor);
-            oleColor = System.Convert.ToInt32(colorableItems.Foreground);
-            //foregroundColor = System.Drawing.ColorTranslator.FromOle(oleColor);
-            //text_font = new System.Drawing.Font(fontFamily, fontSize);
+            glyphBrush = new SolidColorBrush(Color.FromArgb(0x80, color_bytes[2], color_bytes[1], color_bytes[0]));
         }
 
         /// <summary>
