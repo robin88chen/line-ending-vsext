@@ -31,6 +31,10 @@ namespace LineEndings2022
         ImageSource image_source_crlf;
         ImageSource image_source_lf;
         float pixelsPerDip;
+
+        string lf_mark = "$";
+        string crlf_mark = "8";
+
         private SVsServiceProvider service_provider;
         /// <summary>
         /// Initializes a new instance of the <see cref="LineEndingAdornment"/> class.
@@ -43,9 +47,10 @@ namespace LineEndings2022
             ThreadHelper.ThrowIfNotOnUIThread();
 
             pixelsPerDip = (float)VisualTreeHelper.GetDpi(new Button()).PixelsPerDip;
+            RetrieveMarks();
             GetTextFont();
-            image_source_crlf = GenerateTextImageSource("8", glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
-            image_source_lf = GenerateTextImageSource("$", glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
+            image_source_crlf = GenerateTextImageSource(crlf_mark, glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
+            image_source_lf = GenerateTextImageSource(lf_mark, glyphBrush, FontStyles.Normal, FontWeights.Light, FontStretches.Normal);
             if (view == null)
             {
                 throw new ArgumentNullException("view");
@@ -74,6 +79,13 @@ namespace LineEndings2022
             }
         }
 
+        private void RetrieveMarks()
+        {
+            OptionPageGrid page = (OptionPageGrid)LineEndings2022Package.Instance.GetDialogPage(typeof(OptionPageGrid));
+            page.LoadSettingsFromStorage();
+            lf_mark = $"{Convert.ToChar((byte)page.LfMark)}";
+            crlf_mark = $"{Convert.ToChar((byte)page.CrLfMark)}";
+        }
         private void GetTextFont()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -96,40 +108,37 @@ namespace LineEndings2022
         {
             IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
 
-            // Loop through each character, and place a box around any 'a'
-            for (int charIndex = line.Start; charIndex < line.EndIncludingLineBreak; charIndex++)
+            int charIndex = line.EndIncludingLineBreak - 1;
+
+            if (this.view.TextSnapshot[charIndex] == '\n')
             {
-                if (this.view.TextSnapshot[charIndex] == '\n')
+                SnapshotSpan span = new SnapshotSpan(this.view.TextSnapshot, Span.FromBounds(charIndex, charIndex + 1));
+                Geometry geometry = textViewLines.GetMarkerGeometry(span);
+                if (geometry != null)
                 {
-                    SnapshotSpan span = new SnapshotSpan(this.view.TextSnapshot, Span.FromBounds(charIndex, charIndex + 1));
-                    
-                    Geometry geometry = textViewLines.GetMarkerGeometry(span);
-                    if (geometry != null)
+                    //var drawing = new GeometryDrawing(line.LineBreakLength == 2 ? this.brush_for_crlf : this.brush_for_lf, this.pen, geometry);
+                    //drawing.Freeze();
+
+                    //var drawingImage = new DrawingImage(drawing);
+                    //drawingImage.Freeze();
+                    Image image;
+                    if (line.LineBreakLength == 2)
                     {
-                        //var drawing = new GeometryDrawing(line.LineBreakLength == 2 ? this.brush_for_crlf : this.brush_for_lf, this.pen, geometry);
-                        //drawing.Freeze();
-
-                        //var drawingImage = new DrawingImage(drawing);
-                        //drawingImage.Freeze();
-                        Image image;
-                        if (line.LineBreakLength == 2)
-                        {
-                            image_source_crlf.Freeze();
-                            image = new Image { Source = image_source_crlf };
-                        }
-                        else
-                        {
-                            image_source_lf.Freeze();
-                            image = new Image { Source = image_source_lf };
-
-                        }
-
-                        // Align the image with the top of the bounds of the text geometry
-                        Canvas.SetLeft(image, geometry.Bounds.Left + 1);
-                        Canvas.SetTop(image, geometry.Bounds.Top + 2);
-
-                        this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
+                        image_source_crlf.Freeze();
+                        image = new Image { Source = image_source_crlf };
                     }
+                    else
+                    {
+                        image_source_lf.Freeze();
+                        image = new Image { Source = image_source_lf };
+
+                    }
+
+                    // Align the image with the top of the bounds of the text geometry
+                    Canvas.SetLeft(image, geometry.Bounds.Left + 1);
+                    Canvas.SetTop(image, geometry.Bounds.Top + 2);
+
+                    this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
                 }
             }
         }

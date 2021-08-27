@@ -48,7 +48,9 @@
     <Compile Include="LineEndingAdornment.cs" />
     <Compile Include="LineEndingAdornmentTextViewCreationListener.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="LineEndings2022Package.cs" />
+    <Compile Include="LineEndings2022Package.cs">
+      <SubType>Component</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
