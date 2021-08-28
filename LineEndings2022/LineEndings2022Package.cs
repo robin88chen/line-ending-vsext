@@ -42,7 +42,7 @@ namespace LineEndings2022
 
         [Category("Line Ending Mark")]
         [DisplayName("LF")]
-        [Description("line ending LF mark")]
+        [Description("line ending LF mark (require re-open text)")]
         //[Editor(typeof(MarkTextEditor), typeof(UITypeEditor))]
         public MarkType LfMark
         {
@@ -53,7 +53,7 @@ namespace LineEndings2022
 
         [Category("Line Ending Mark")]
         [DisplayName("CRLF")]
-        [Description("line ending CRLF mark")]
+        [Description("line ending CRLF mark (require re-open text)")]
         //[Editor(typeof(MarkTextEditor), typeof(UITypeEditor))]
         public MarkType CrLfMark
         {
