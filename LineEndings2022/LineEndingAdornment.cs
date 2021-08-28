@@ -60,6 +60,15 @@ namespace LineEndings2022
 
             this.view = view;
             this.view.LayoutChanged += this.OnLayoutChanged;
+            /*this.view.Closed += delegate { this.OnClosed(); };
+            if (LineEndings2022Package.Instance != null)
+            {
+                OptionPageGrid page = (OptionPageGrid)LineEndings2022Package.Instance.GetDialogPage(typeof(OptionPageGrid));
+                if (page != null)
+                {
+                    page.OnApplyMarks += RefreshTextView;
+                }
+            }*/
         }
 
         /// <summary>
@@ -79,9 +88,31 @@ namespace LineEndings2022
             }
         }
 
+        /*void OnClosed()
+        {
+            if (LineEndings2022Package.Instance != null)
+            {
+                OptionPageGrid page = (OptionPageGrid)LineEndings2022Package.Instance.GetDialogPage(typeof(OptionPageGrid));
+                if (page != null)
+                {
+                    page.OnApplyMarks -= RefreshTextView;
+                }
+            }
+        }*/
+        /*private void RefreshTextView()
+        {
+            RetrieveMarks();
+            IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
+            foreach (var line in textViewLines)
+            {
+                CreateVisuals(line);
+            }
+        }*/
         private void RetrieveMarks()
         {
+            if (LineEndings2022Package.Instance == null) return;
             OptionPageGrid page = (OptionPageGrid)LineEndings2022Package.Instance.GetDialogPage(typeof(OptionPageGrid));
+            if (page == null) return;
             page.LoadSettingsFromStorage();
             lf_mark = $"{Convert.ToChar((byte)page.LfMark)}";
             crlf_mark = $"{Convert.ToChar((byte)page.CrLfMark)}";
