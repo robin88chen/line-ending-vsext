@@ -34,6 +34,7 @@ namespace LineEndings2022
 
         string lf_mark = "$";
         string crlf_mark = "8";
+        bool enabled = true;
 
         private SVsServiceProvider service_provider;
         /// <summary>
@@ -116,6 +117,7 @@ namespace LineEndings2022
             page.LoadSettingsFromStorage();
             lf_mark = $"{Convert.ToChar((byte)page.LfMark)}";
             crlf_mark = $"{Convert.ToChar((byte)page.CrLfMark)}";
+            enabled = page.Enabled;
         }
         private void GetTextFont()
         {
@@ -137,6 +139,7 @@ namespace LineEndings2022
         /// <param name="line">Line to add the adornments</param>
         private void CreateVisuals(ITextViewLine line)
         {
+            if (!enabled) return;
             IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
 
             int charIndex = line.EndIncludingLineBreak - 1;
