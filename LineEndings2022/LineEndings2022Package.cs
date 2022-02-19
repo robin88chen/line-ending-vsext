@@ -38,8 +38,18 @@ namespace LineEndings2022
             NewLineLeft = 0x42,
             ArrowDown2 = 0x69,
         }
-        private MarkType lfMark = MarkType.ArrowDown;
 
+        private bool enabled = true;
+
+        [Category("Line Ending")]
+        [DisplayName("Enable Line Ending")]
+        [Description("enable show line endings (require re-open text)")]
+        public bool Enabled
+        {
+            get { return enabled; }
+            set { enabled = value; }
+        }
+        private MarkType lfMark = MarkType.ArrowDown;
         [Category("Line Ending Mark")]
         [DisplayName("LF")]
         [Description("line ending LF mark (require re-open text)")]
@@ -49,8 +59,8 @@ namespace LineEndings2022
             get { return lfMark; }
             set { lfMark = value; }
         }
-        private MarkType crlfMark = MarkType.ArrowCornerDownLeft;
 
+        private MarkType crlfMark = MarkType.ArrowCornerDownLeft;
         [Category("Line Ending Mark")]
         [DisplayName("CRLF")]
         [Description("line ending CRLF mark (require re-open text)")]
