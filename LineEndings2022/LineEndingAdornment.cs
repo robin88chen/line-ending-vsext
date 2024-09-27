@@ -1,6 +1,7 @@
 ﻿using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using System;
@@ -37,13 +38,15 @@ namespace LineEndings2022
         bool enabled = true;
 
         private SVsServiceProvider service_provider;
+        private IEditorFormatMap format_map;
         /// <summary>
         /// Initializes a new instance of the <see cref="LineEndingAdornment"/> class.
         /// </summary>
         /// <param name="view">Text view to create the adornment for</param>
-        public LineEndingAdornment(SVsServiceProvider provider, IWpfTextView view)
+        public LineEndingAdornment(SVsServiceProvider provider, IEditorFormatMapService format_map_service, IWpfTextView view)
         {
             service_provider = provider;
+            format_map = format_map_service.GetEditorFormatMap(view);
 
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -130,7 +133,9 @@ namespace LineEndings2022
             var fontColorItems = propertiesList.Item("FontsAndColorsItems").Object as FontsAndColorsItems;
             var colorableItems = fontColorItems.Item("Comment");
             byte[] color_bytes = BitConverter.GetBytes(colorableItems.Foreground);
-            glyphBrush = new SolidColorBrush(Color.FromArgb(0x80, color_bytes[2], color_bytes[1], color_bytes[0]));
+            var visibleWhitespace = format_map.GetProperties("Visible Whitespace");
+            glyphBrush = (Brush)visibleWhitespace[EditorFormatDefinition.ForegroundBrushId];
+            //glyphBrush = new SolidColorBrush(Color.FromArgb(0x80, color_bytes[2], color_bytes[1], color_bytes[0]));
         }
 
         /// <summary>
@@ -188,7 +193,7 @@ namespace LineEndings2022
                 {
                     //typeface = new Typeface(new FontFamily(new Uri("pack://application:,,,"), fontFamily.Source), fontStyle, fontWeight, fontStretch);
                     //if (!typeface.TryGetGlyphTypeface(out glyphTypeface))
-                        throw new InvalidOperationException("No glyphtypeface found");
+                    throw new InvalidOperationException("No glyphtypeface found");
                 }
 
                 ushort[] glyphIndexes = new ushort[text.Length];
