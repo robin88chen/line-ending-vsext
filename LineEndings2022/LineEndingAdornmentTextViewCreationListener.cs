@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System.ComponentModel.Composition;
@@ -29,6 +30,9 @@ namespace LineEndings2022
         [Import]
         internal SVsServiceProvider ServiceProvider = null;
 
+        [Import]
+        internal IEditorFormatMapService FormatMapService;
+
 #pragma warning restore 649, 169
 
         #region IWpfTextViewCreationListener
@@ -41,7 +45,7 @@ namespace LineEndings2022
         public void TextViewCreated(IWpfTextView textView)
         {
             // The adornment will listen to any event that changes the layout (text changes, scrolling, etc)
-            new LineEndingAdornment(ServiceProvider, textView);
+            new LineEndingAdornment(ServiceProvider, FormatMapService, textView);
         }
 
         #endregion
