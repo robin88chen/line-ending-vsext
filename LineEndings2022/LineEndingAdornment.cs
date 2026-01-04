@@ -119,8 +119,6 @@ namespace LineEndings2022
 
         private void RemoveStaleAdornments(ISet<int> visibleLineNumbers)
         {
-            if (visibleLineNumbers == null) return;
-
             var staleKeys = new List<int>();
 
             foreach (var pair in adornments)
