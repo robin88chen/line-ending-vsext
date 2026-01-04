@@ -121,7 +121,7 @@ namespace LineEndings2022
         {
             var staleKeys = new List<int>();
 
-            foreach (var pair in adornments)
+            foreach (var pair in this.adornments)
             {
                 if (!visibleLineNumbers.Contains(pair.Key))
                 {
