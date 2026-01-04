@@ -92,9 +92,12 @@ namespace LineEndings2022
         /// <param name="e">The event arguments.</param>
         private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
+            var visibleLineNumbers = new HashSet<int>();
+
             foreach (ITextViewLine line in this.view.TextViewLines)
             {
                 int lineNumber = line.Start.GetContainingLine().LineNumber;
+                visibleLineNumbers.Add(lineNumber);
 
                 // Remove old adornment if it exists
                 if (adornments.TryGetValue(lineNumber, out var oldAdornment))
@@ -110,6 +113,27 @@ namespace LineEndings2022
                     adornments[lineNumber] = newAdornment;
                 }
             }
+
+            RemoveStaleAdornments(visibleLineNumbers);
+        }
+
+        private void RemoveStaleAdornments(ISet<int> visibleLineNumbers)
+        {
+            if (visibleLineNumbers == null) return;
+
+            var staleKeys = new List<int>();
+
+            foreach (var pair in adornments)
+            {
+                if (!visibleLineNumbers.Contains(pair.Key))
+                {
+                    this.layer.RemoveAdornment(pair.Value);
+                    staleKeys.Add(pair.Key);
+                }
+            }
+
+            foreach (int key in staleKeys)
+                adornments.Remove(key);
         }
 
         /*void OnClosed()
