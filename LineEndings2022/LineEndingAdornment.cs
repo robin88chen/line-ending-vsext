@@ -100,21 +100,21 @@ namespace LineEndings2022
                 visibleLineNumbers.Add(lineNumber);
 
                 // Remove old adornment if it exists
-                if (adornments.TryGetValue(lineNumber, out var oldAdornment))
+                if (this.adornments.TryGetValue(lineNumber, out var oldAdornment))
                 {
                     this.layer.RemoveAdornment(oldAdornment);
-                    adornments.Remove(lineNumber);
+                    this.adornments.Remove(lineNumber);
                 }
 
                 // Create and add new adornment
-                var newAdornment = CreateVisuals(line);
+                var newAdornment = this.CreateVisuals(line);
                 if (newAdornment != null)
                 {
-                    adornments[lineNumber] = newAdornment;
+                    this.adornments[lineNumber] = newAdornment;
                 }
             }
 
-            RemoveStaleAdornments(visibleLineNumbers);
+            this.RemoveStaleAdornments(visibleLineNumbers);
         }
 
         private void RemoveStaleAdornments(ISet<int> visibleLineNumbers)
@@ -133,7 +133,7 @@ namespace LineEndings2022
             }
 
             foreach (int key in staleKeys)
-                adornments.Remove(key);
+                this.adornments.Remove(key);
         }
 
         /*void OnClosed()
