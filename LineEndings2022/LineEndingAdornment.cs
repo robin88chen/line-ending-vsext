@@ -181,7 +181,7 @@ namespace LineEndings2022
         }
 
         /// <summary>
-        /// Adds the scarlet box behind the 'a' characters within the given line
+        /// Creates and adds a visual adornment to display the line ending type for the given line
         /// </summary>
         /// <param name="line">Line to add the adornment</param>
         /// <returns>Adornment added</returns>
