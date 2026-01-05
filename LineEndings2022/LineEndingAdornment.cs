@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -25,6 +26,11 @@ namespace LineEndings2022
         /// Text view where the adornment is created.
         /// </summary>
         private readonly IWpfTextView view;
+
+        /// <summary>
+        /// Dictionary of adornments by line number.
+        /// </summary>
+        private readonly Dictionary<int, UIElement> adornments = new Dictionary<int, UIElement>();
 
         private Brush glyphBrush;
 
@@ -76,7 +82,7 @@ namespace LineEndings2022
         }
 
         /// <summary>
-        /// Handles whenever the text displayed in the view changes by adding the adornment to any reformatted lines
+        /// Handles whenever the text displayed in the view changes by removing (if any) and (re)adding the adornment to its lines
         /// </summary>
         /// <remarks><para>This event is raised whenever the rendered text displayed in the <see cref="ITextView"/> changes.</para>
         /// <para>It is raised whenever the view does a layout (which happens when DisplayTextLineContainingBufferPosition is called or in response to text or classification changes).</para>
@@ -84,12 +90,48 @@ namespace LineEndings2022
         /// </remarks>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event arguments.</param>
-        internal void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
+        private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
-            foreach (ITextViewLine line in e.NewOrReformattedLines)
+            var visibleLineNumbers = new HashSet<int>();
+
+            foreach (ITextViewLine line in this.view.TextViewLines)
             {
-                this.CreateVisuals(line);
+                int lineNumber = line.Start.GetContainingLine().LineNumber;
+                visibleLineNumbers.Add(lineNumber);
+
+                // Remove old adornment if it exists
+                if (this.adornments.TryGetValue(lineNumber, out var oldAdornment))
+                {
+                    this.layer.RemoveAdornment(oldAdornment);
+                    this.adornments.Remove(lineNumber);
+                }
+
+                // Create and add new adornment
+                var newAdornment = this.CreateVisuals(line);
+                if (newAdornment != null)
+                {
+                    this.adornments[lineNumber] = newAdornment;
+                }
             }
+
+            this.RemoveStaleAdornments(visibleLineNumbers);
+        }
+
+        private void RemoveStaleAdornments(ISet<int> visibleLineNumbers)
+        {
+            var staleKeys = new List<int>();
+
+            foreach (var pair in this.adornments)
+            {
+                if (!visibleLineNumbers.Contains(pair.Key))
+                {
+                    this.layer.RemoveAdornment(pair.Value);
+                    staleKeys.Add(pair.Key);
+                }
+            }
+
+            foreach (int key in staleKeys)
+                this.adornments.Remove(key);
         }
 
         /*void OnClosed()
@@ -139,12 +181,13 @@ namespace LineEndings2022
         }
 
         /// <summary>
-        /// Adds the scarlet box behind the 'a' characters within the given line
+        /// Creates and adds a visual adornment to display the line ending type for the given line
         /// </summary>
-        /// <param name="line">Line to add the adornments</param>
-        private void CreateVisuals(ITextViewLine line)
+        /// <param name="line">Line to add the adornment</param>
+        /// <returns>Adornment added</returns>
+        private UIElement CreateVisuals(ITextViewLine line)
         {
-            if (!enabled) return;
+            if (!enabled || line.LineBreakLength == 0) return null;
             IWpfTextViewLineCollection textViewLines = this.view.TextViewLines;
 
             int charIndex = line.EndIncludingLineBreak - 1;
@@ -177,9 +220,11 @@ namespace LineEndings2022
                     Canvas.SetLeft(image, geometry.Bounds.Left + 1);
                     Canvas.SetTop(image, geometry.Bounds.Top + 2);
 
-                    this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null);
+                    if (this.layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, image, null))
+                        return image;
                 }
             }
+            return null;
         }
         private ImageSource GenerateTextImageSource(string text, Brush foreBrush, FontStyle fontStyle, FontWeight fontWeight, FontStretch fontStretch)
         {
